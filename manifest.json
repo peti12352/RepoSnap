@@ -3,6 +3,11 @@
   "description": "Build Chrome Extensions in Python/PyScript",
   "version": "1.0",
   "manifest_version": 3,
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "permissions": ["tabs"],
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",

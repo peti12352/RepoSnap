@@ -1,41 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <title>PyScript Demo 1</title>
+
+<head>
+    <title>GitSnap</title>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <py-config>
-      [[runtimes]]
-      src = "runtime/pyodide.js"
-      name = "pyodide-0.21.3"
-      lang = "python"
+        [[runtimes]]
+        src = "runtime/pyodide.js"
+        name = "pyodide-0.21.3"
+        lang = "python"
     </py-config>
     <link rel="icon" type="icons/png" href="/icon-128.png" />
     <link rel="stylesheet" href="popup.css" />
     <link rel="stylesheet" href="runtime/pyscript.css" />
     <script defer src="runtime/pyscript.js"></script>
-  </head>
-  <body>
-    <h2>Hello World!</h2>
-    <h4 id="datetime"></h4>
-<!-- Python code below is intentionally left-aligned to utilise full width  -->
-<py-script>
-from js import document as popup  # DOM for this popup page
-from datetime import datetime
+</head>
 
-# Use print to update the popup
-print("This is the current date and time in ISO8601 format, courtesy of Python and PyScript.<br><br>")
+<body>
+    <h2 class="title" style="text-align: center;">GitSnap</h2>
 
-# Update an element in the popup directly
-insert_content = popup.getElementById('datetime')
-insert_content.innerHTML = f"<i>{datetime.now().isoformat()}</i>"
-</py-script>
-<py-repl>
-text = "This is a REPL session.<br>"
-text += "You can add several lines of Python<br>"
-text += "Then just press Shift-ENTER to run!"
-print(text.upper())
-</py-repl>
-  </body>
+    <!-- The box where the Bash script will be displayed -->
+    <div id="script-box">
+        <textarea id="bash-script" rows="10" cols="40" readonly></textarea>
+        <button id="copy-button">Copy Script</button>
+        <script>
+            chrome.runtime.sendMessage({message: "get_active_tab"}, function(response) {
+            console.log("Active Tab URL: " + response.url);
+            // Call the get_readme_content function with the URL
+            pyodide.runPython('get_readme_content("' + response.url + '")');ű
+            });
+        </script>
+    </div>
+
+    <!-- PyScript section -->
+    <py-env>
+        - httpx
+        - python-dotenv
+    </py-env>
+    
+    <py-script>
+    from js import fetch, document, window, DOMParser
+    from xml.etree import ElementTree as ET
+    from js import JSON
+    from js import chrome, Promise
+    from js import Worker, URL, Blob
+
+    async def get_readme_content(repo_url):
+        # Extract the owner and repo name from the URL
+        if repo_url.endswith('/'):
+            repo_url = repo_url[:-1]
+
+
+        owner, repo = repo_url.split('/')[-2:]
+        api_url = f'https://api.github.com/repos/{owner}/{repo}/readme'
+        
+        # Fetch the README content from the GitHub API
+        response = await fetch(api_url)
+
+        print("Fetching README content from GitHub API...")
+        if response.status == 200:
+            # Parse the JSON response
+            readme_data = await response.json()
+            readme_content = readme_data['content']
+            
+            # Decode the base64 encoded content
+            decoded_content = window.atob(readme_content)
+            print("README content fetched successfully!")
+            return decoded_content
+        else:
+            print("Error fetching README content from GitHub API.")
+            return None
+
+
+
+    
+    # Function to fetch Bash script from OpenAI's API using JavaScript's fetch API
+    def fetch_bash_script(readme_content):
+        api_key = document.env.get('OPENAI_API_KEY')
+    
+        url = 'https://api.openai.com/v1/completions'
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        }
+        data = {
+            'model': 'text-davinci-003',
+            'prompt': f"Read the following GitHub README and create a Bash script for the user to set up the project:\n\n{readme_content}",
+            'temperature': 0,
+            'max_tokens': 1000,
+        }
+    
+        # Use fetch API to send the request to OpenAI API
+        fetch_promise = window.fetch(url, {
+            'method': 'POST',
+            'headers': headers,
+            'body': JSON.stringify(data),
+        })
+    
+        def handle_response(response):
+            if response.ok:
+                return response.json()
+            else:
+                print("Error fetching Bash script from OpenAI API.")
+                return None
+    
+        def handle_json_response(json_response):
+            if json_response:
+                script_content = json_response['choices'][0]['text']
+                document.getElementById('bash-script').value = script_content
+    
+        fetch_promise.then(handle_response).then(handle_json_response)
+    
+    # Function to handle copying the script to the clipboard
+    def copy_script():
+        bash_script = document.getElementById('bash-script')
+        bash_script.select()
+        document.execCommand('copy')
+        print("Script copied to clipboard!")
+    
+    # Set up event listener for copy button
+    document.getElementById('copy-button').addEventListener('click', copy_script)
+    
+    # Main function to execute the process
+    def main():
+        print("start")
+
+        # Define a JavaScript function that gets the active tab
+        js_code = """
+        self.onmessage = function() {
+            function get_active_tab(tabs) {
+                // Get the active tab from the tabs array
+                var active_tab = tabs[0];
+                console.log("Active Tab URL: " + active_tab.url);
+                // Get the URL of the active tab
+                var url = active_tab.url;
+                // Call the get_readme_content function with the URL
+                pyodide.runPython('get_readme_content("' + url + '")');
+            }
+            // Use the Chrome API to get the active tab
+            chrome.tabs.query({ 'active': true, 'currentWindow': true }, get_active_tab);
+        }
+        """
+
+        # Define a JavaScript function that creates a new Blob
+        create_blob_code = """
+        function create_blob(data) {
+            return new Blob(data);
+        }
+        """
+
+        # Execute the JavaScript code to define the create_blob function
+        window.eval(create_blob_code)
+
+        # Create a Web Worker
+        blob = window.create_blob([js_code])
+        url = URL.createObjectURL(blob)
+        worker = Worker(url)
+
+        # Start the worker
+        worker.postMessage(None)
+
+    # Execute the main function
+    main()
+    </py-script>
+</body>
+
 </html>
-
