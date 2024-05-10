@@ -20,8 +20,8 @@ function extractOwnerAndRepoFromURL(url) {
     
     // Split the URL and extract the owner and repo from the end
     const parts = url.split('/');
-    const owner = parts[parts.length - 2];
-    const repo = parts[parts.length - 1];
+    const owner = parts[parts.length - 2]; // Second last part is the owner
+    const repo = parts[parts.length - 1]; // Last part is the repo name
     
     return { owner, repo };
 }
@@ -46,6 +46,24 @@ async function getReadmeContentFromRawUrl(owner, repo) {
     }
 }
 
+// Handle the README content and pass it to the background script
+async function handleReadmeContent(readmeContent) {
+    if (readmeContent) {
+        console.log('Fetched README content:', readmeContent);
+        
+        // Send README content to background script to generate Bash script
+        chrome.runtime.sendMessage({ type: 'generateBashScript', readme: readmeContent }, (response) => {
+            if (response && response.bashScript) {
+                // Display the Bash script
+                console.log('Generated Bash script:', response.bashScript);
+                // You can use the Bash script further in your extension (e.g., show it in a popup)
+            } else {
+                console.error('Failed to generate Bash script');
+            }
+        });
+    }
+}
+
 // Example usage: Fetch README content based on the active site URL
 async function fetchAndHandleReadmeContent() {
     try {
@@ -59,9 +77,12 @@ async function fetchAndHandleReadmeContent() {
         const readmeContent = await getReadmeContentFromRawUrl(owner, repo);
 
         if (readmeContent) {
-            console.log('Fetched README content:', readmeContent);
+            console.log('Fetched README content:', readmeContent); // for debugging (was incredible satisfying to see this works!)
             // You can now use the readmeContent as needed in your extension
         }
+        // Handle the README content
+        await handleReadmeContent(readmeContent);
+
     } catch (error) {
         console.error('Failed to fetch README content:', error);
     }
