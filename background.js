@@ -7,44 +7,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({ url: null });
             }
         });
-        // Indicate that the response will be asynchronous
-        return true;
+        return true;  // Indicates that sendResponse will be called asynchronously
     }
-});
 
-
-
-async function getBashScript(readme) {
-    const apiKey = ''; // Replace with your OpenAI API key
-    const url = 'https://api.openai.com/v1/completions';
-
-    // Construct the prompt
-    const prompt = `Generate a bash script for the following GitHub README content:\n\n${readme}`;
-
-    try {
-        const response = await fetch(url, {
+    if (message.action === 'generate_bash_script') {
+        fetch('http://localhost:3000/generate-bash-script', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                model: 'gpt-3.5-turbo',
-                prompt: prompt,
-                temperature: 0.7,
-                max_tokens: 1000,
-            }),
+            body: JSON.stringify({ readme: message.readme }),
+        })
+        .then(response => response.json())
+        .then(data => sendResponse({ script: data.script }))
+        .catch(error => {
+            console.error('Failed to get bash script from server:', error);
+            sendResponse({ script: null });
         });
-
-        if (response.ok) {
-            const data = await response.json();
-            return data.choices[0].text.trim();
-        } else {
-            console.error('Failed to get bash script from ChatGPT:', response.status, response.statusText);
-            return null;
-        }
-    } catch (error) {
-        console.error('Error during API request:', error);
-        return null;
+        return true;  // Indicates that sendResponse will be called asynchronously
     }
-}
+});

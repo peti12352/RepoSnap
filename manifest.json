@@ -2,29 +2,24 @@
     "manifest_version": 3,
     "name": "GitHub Script Generator",
     "version": "1.0",
-    "description": "Generates a bash script for GitHub repository pages using ChatGPT",
-    "permissions": ["activeTab", "scripting", "tabs"],
-    "content_scripts": [
-    {
-        "matches": ["https://github.com/*"],
-        "js": ["content.js"],
-        "run_at": "document_end"
-    }
+    "permissions": [
+        "activeTab",
+        "storage"
+    ],
+    "host_permissions": [
+        "http://localhost:3000/*",
+        "https://github.com/*"
     ],
     "background": {
-    "service_worker": "background.js"
+        "service_worker": "background.js"
     },
-    "action": {
-        "default_popup": "popup.html",
-        "default_icon": {
-            "16": "icons/icon-16.png",
-            "48": "icons/icon-48.png",
-            "128": "icons/icon-128.png"
+    "content_scripts": [
+        {
+            "matches": ["https://github.com/*"],
+            "js": ["content.js"]
         }
-    },
-    "icons": {
-        "16": "icons/icon-16.png",
-        "48": "icons/icon-48.png",
-        "128": "icons/icon-128.png"
+    ],
+    "action": {
+        "default_popup": "popup.html"
     }
 }

@@ -1,4 +1,3 @@
-// Function to request current tab URL from the background script
 function requestCurrentTabUrl() {
     return new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({ action: 'get_current_tab_url' }, (response) => {
@@ -11,14 +10,11 @@ function requestCurrentTabUrl() {
     });
 }
 
-// Function to extract owner and repository from the current GitHub URL
 function extractOwnerAndRepoFromURL(url) {
-    // Remove trailing slash if present
     if (url.endsWith('/')) {
         url = url.slice(0, -1);
     }
     
-    // Split the URL and extract the owner and repo from the end
     const parts = url.split('/');
     const owner = parts[parts.length - 2];
     const repo = parts[parts.length - 1];
@@ -26,12 +22,9 @@ function extractOwnerAndRepoFromURL(url) {
     return { owner, repo };
 }
 
-// Function to fetch README content from a raw GitHub URL
-async function getReadmeContentFromRawUrl(owner, repo) {
-    // Construct the raw URL for the README file
+async function fetchReadmeContent(owner, repo) {
     const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/master/README.md`;
-
-    // Get the text content from the raw URL
+    
     try {
         const response = await fetch(rawUrl);
         if (response.ok) {
@@ -46,26 +39,52 @@ async function getReadmeContentFromRawUrl(owner, repo) {
     }
 }
 
-// Example usage: Fetch README content based on the active site URL
-async function fetchAndHandleReadmeContent() {
+async function fetchAndGenerateScript() {
     try {
-        // Request the current tab's URL
         const currentUrl = await requestCurrentTabUrl();
-
-        // Extract owner and repo from the URL
         const { owner, repo } = extractOwnerAndRepoFromURL(currentUrl);
-
-        // Fetch README content using the raw URL
-        const readmeContent = await getReadmeContentFromRawUrl(owner, repo);
+        const readmeContent = await fetchReadmeContent(owner, repo);
 
         if (readmeContent) {
-            console.log('Fetched README content:', readmeContent);
-            // You can now use the readmeContent as needed in your extension
+            chrome.runtime.sendMessage({ action: 'generate_bash_script', readme: readmeContent }, (response) => {
+                if (response && response.script) {
+                    document.getElementById('bash-script').value = response.script;
+                    document.getElementById('status').textContent = 'Script generated!';
+                } else {
+                    document.getElementById('status').textContent = 'Failed to generate script.';
+                }
+            });
+        } else {
+            document.getElementById('status').textContent = 'Failed to fetch README content.';
         }
     } catch (error) {
-        console.error('Failed to fetch README content:', error);
+        console.error('Error in fetch and generate script:', error);
+        document.getElementById('status').textContent = 'Error in fetch and generate script.';
     }
 }
 
-// Call the function to fetch README content
-fetchAndHandleReadmeContent();
+// Ensure the DOM is fully loaded before adding event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const generateButton = document.getElementById('generate-script-button');
+    if (generateButton) {
+        generateButton.addEventListener('click', fetchAndGenerateScript);
+    } else {
+        console.error('Generate script button not found.');
+    }
+
+    const copyButton = document.getElementById('copy-button');
+    if (copyButton) {
+        copyButton.addEventListener('click', () => {
+            const scriptTextarea = document.getElementById('bash-script');
+            if (scriptTextarea) {
+                scriptTextarea.select();
+                document.execCommand('copy');
+                document.getElementById('status').textContent = 'Script copied to clipboard!';
+            } else {
+                console.error('Bash script textarea not found.');
+            }
+        });
+    } else {
+        console.error('Copy button not found.');
+    }
+});
