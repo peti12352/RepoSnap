@@ -52,6 +52,7 @@ async function fetchAndGenerateScript() {
                 if (response && response.script) {
                     document.getElementById('bash-script').value = response.script;
                     document.getElementById('status').textContent = 'Script generated!';
+                    chrome.storage.local.set({ generatedScript: response.script });
                 } else {
                     document.getElementById('status').textContent = 'Failed to generate script.';
                 }
@@ -66,6 +67,12 @@ async function fetchAndGenerateScript() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    chrome.storage.local.get('generatedScript', (result) => {
+        if (result.generatedScript) {
+            document.getElementById('bash-script').value = result.generatedScript;
+        }
+    });
+
     const generateScriptButton = document.getElementById('generate-script-button');
     const copyButton = document.getElementById('copy-button');
 
