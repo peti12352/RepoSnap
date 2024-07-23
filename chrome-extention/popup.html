@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Script Generator</title>
+    <link rel="stylesheet" href="/styles/popup.css">
+    <script defer src="/scripts/content.js"></script>
+</head>
+<body>
+    <div id="content">
+        <h2>GitHub Script Generator</h2>
+        <p>Click the button below to generate a bash script based on the README content of the current GitHub repository page.</p>
+        <button id="generate-script-button">Generate Script</button>
+        <div id="script-box">
+            <textarea id="bash-script" rows="8" cols="40" readonly></textarea>
+            <button id="copy-button">Copy Script</button>
+        </div>
+        <div id="status"></div>
+    </div>
+</body>
+</html>

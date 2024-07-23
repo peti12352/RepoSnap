@@ -1,48 +1,55 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const fetch = require('node-fetch');
+const axios = require('axios');
+const cors = require('cors'); // Import the cors package
 require('dotenv').config();
 
 const app = express();
-app.use(bodyParser.json());
-app.use(cors()); // Enables CORS for all origins
+const port = 3000;
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_URL = 'https://api.openai.com/v1/completions';
+const openaiApiKey = process.env.OPENAI_API_KEY;
+const openaiEndpoint = 'https://api.openai.com/v1/chat/completions';
+
+app.use(express.json());
+app.use(cors()); // Enable CORS for all routes
 
 app.post('/generate-bash-script', async (req, res) => {
     const { readme } = req.body;
 
     if (!readme) {
+        console.log('README content is required');
         return res.status(400).json({ error: 'README content is required' });
     }
 
+    else {
+        console.log('Request to generate bash script received');
+    }
+
     try {
-        const response = await fetch(OPENAI_URL, {
-            method: 'POST',
+        const response = await axios.post(openaiEndpoint, {
+            model: 'gpt-3.5-turbo',
+            messages: [
+                {
+                    role: 'user',
+                    content: `Generate a bash script for the following GitHub README content:\n\n${readme}`
+                }
+            ],
+            max_tokens: 500,
+            temperature: 0.5
+        }, {
             headers: {
-                'Authorization': `Bearer ${OPENAI_API_KEY}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'gpt-3.5-turbo',
-                prompt: `Generate a bash script for the following GitHub README content:\n\n${readme}`,
-                temperature: 0.7,
-                max_tokens: 1000,
-            }),
+                'Authorization': `Bearer ${openaiApiKey}`,
+                'Content-Type': 'application/json'
+            }
         });
 
-        if (response.ok) {
-            const data = await response.json();
-            res.json({ script: data.choices[0].text.trim() });
-        } else {
-            res.status(response.status).json({ error: response.statusText });
-        }
+        const script = response.data.choices[0]?.message?.content?.trim() || '';
+        res.send(script);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error making request to OpenAI:', error);
+        res.status(500).send('Error retrieving the bash script');
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(port, () => {
+    console.log(`Server is running at http://localhost:${port}`);
+});
