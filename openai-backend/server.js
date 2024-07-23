@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors'); // Import the cors package
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -13,6 +14,7 @@ app.use(express.json());
 app.use(cors()); // Enable CORS for all routes
 
 app.post('/generate-bash-script', async (req, res) => {
+    const promptBeginning = fs.readFileSync('/prompts/p1.txt', 'utf8');
     const { readme } = req.body;
 
     if (!readme) {
@@ -30,7 +32,9 @@ app.post('/generate-bash-script', async (req, res) => {
             messages: [
                 {
                     role: 'user',
-                    content: `Generate a bash script for the following GitHub README content:\n\n${readme}`
+
+                    // concat the prompt.txt and the readme for the content
+                    content: `${promptBeginning}\n${readme}`
                 }
             ],
             max_tokens: 500,

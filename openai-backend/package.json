@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
   "dependencies": {
@@ -14,6 +15,7 @@
     "node-fetch": "^2.6.1",
     "openai": "^4.53.0"
   },
+  "devDependencies": {},
   "keywords": [],
   "author": "",
   "license": "ISC",
